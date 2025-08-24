@@ -6,7 +6,7 @@ use std::fmt::Write;
 use std::rc::Rc;
 
 const APL387_BYTES: &[u8] = include_bytes!("../APL387.ttf");
-const HELP_TEXT_FONTSIZE: u16 = 25;
+const HELP_TEXT_FONTSIZE: u16 = 20;
 const LINK_CIRCLE_CLICKING_THRESHOLD: f32 = 20.0;
 const KEYMAP: [(KeyCode, UiRadical); 15] = [
     (KeyCode::C, UiRadical::C),
@@ -216,6 +216,7 @@ async fn main() {
         }
 
         //  ===== Drawing and such =====
+        clear_background(WHITE);
         // links first
         for ((a_id, b_id), m) in UiBlock::count_links(&st.uiblocks) {
             let b = get_block_unchecked(&st.uiblocks, a_id);
@@ -311,19 +312,26 @@ async fn main() {
         }
 
         if st.is_help_up {
+            let baseline = HELP_TEXT_FONTSIZE as f32;
             let dims = measure_text(&help_text, Some(&*apl387), HELP_TEXT_FONTSIZE, 1.0);
-            draw_rectangle(0.0, 0.0, dims.width, dims.height, WHITE);
-            draw_text_ex(
+
+            draw_rectangle(
+                0.0,
+                baseline - dims.offset_y,
+                dims.width,
+                dims.height,
+                WHITE,
+            );
+            draw_multiline_text_ex(
                 &help_text,
                 5.0,
-                5.0,
+                baseline + 5.0,
+                None,
                 TextParams {
                     font: Some(&*apl387),
                     font_size: HELP_TEXT_FONTSIZE,
-                    font_scale: 1.0,
-                    font_scale_aspect: 1.0,
-                    rotation: 1.0,
                     color: BLACK,
+                    ..Default::default()
                 },
             );
         }

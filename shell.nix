@@ -25,6 +25,7 @@ let
     xorg.libXinerama
     xorg.libXrandr
     emscripten # web support
+    libxkbcommon
 
     pkg-config
 

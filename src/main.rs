@@ -50,9 +50,6 @@ async fn main() {
         t.push_str("X -> Elimina\n");
         t.push_str("N -> Anomena mol. sota cursor\n");
         t.push_str("Z -> Undo/Desfer\n");
-        // TODO: Find out why all non-ascii becomes question marks??? I
-        // geniunely don't understand why even draw_text_codepoints doesn't
-        // render them properly
         t.push_str("(Els enllaços buits se consideren H)");
         t
     };
@@ -267,17 +264,10 @@ async fn main() {
                 TextParams {
                     font: Some(&*apl387),
                     font_size: B::FONT_SIZE,
-                    font_scale: 1.0,
-                    font_scale_aspect: 1.0,
-                    rotation: 0.0,
                     color: BLACK,
+                    ..Default::default()
                 },
             );
-            //Some(&*apl387),
-            //block.pos,
-            //B::FONT_SIZE as f32,
-            //B::SPACING,
-            //BLACK,
 
             for center in block.link_positions() {
                 draw_circle(center.x, center.y, B::LINK_CIRCLE_RADIUS, SKYBLUE);
@@ -285,46 +275,39 @@ async fn main() {
         }
 
         if st.naming_text.is_none() {
-            //draw_text_ex(
-            //    &*apl387,
-            //    "H: Ajuda",
-            //    Vec2 {
-            //        x: 5.0,
-            //        y: (st.window_dims.1 - HELP_TEXT_FONTSIZE) as f32,
-            //    },
-            //    HELP_TEXT_FONTSIZE as f32,
-            //    B::SPACING,
-            //    Color::BLACK,
-            //);
             draw_text_ex(
                 "H: Ajuda",
-                5.0,
-                st.window_dims.1 - HELP_TEXT_FONTSIZE as f32,
+                10.0,
+                st.window_dims.1 - HELP_TEXT_FONTSIZE as f32 / 2.0,
                 TextParams {
                     font: Some(&*apl387),
                     font_size: HELP_TEXT_FONTSIZE,
-                    font_scale: 1.0,
-                    font_scale_aspect: 1.0,
-                    rotation: 0.0,
                     color: BLACK,
+                    ..Default::default()
                 },
             );
         }
 
         if st.is_help_up {
             let baseline = HELP_TEXT_FONTSIZE as f32;
-            let dims = measure_text(&help_text, Some(&*apl387), HELP_TEXT_FONTSIZE, 1.0);
+            let (t_width, t_height) =
+                measure_multiline_text(&help_text, Some(&*apl387), HELP_TEXT_FONTSIZE, todo!());
 
             draw_rectangle(
                 0.0,
-                baseline - dims.offset_y,
-                dims.width,
-                dims.height,
-                WHITE,
+                0.0,
+                t_width,
+                t_height,
+                Color {
+                    r: 1.0,
+                    g: 1.0,
+                    b: 1.0,
+                    a: 0.5,
+                },
             );
             draw_multiline_text_ex(
                 &help_text,
-                5.0,
+                10.0,
                 baseline + 5.0,
                 None,
                 TextParams {
@@ -378,4 +361,34 @@ async fn main() {
         }
         next_frame().await;
     }
+}
+
+// Mandatory font because i'm only gonna use this with my font
+fn measure_multiline_text(
+    text: &str,
+    font: &Font,
+    font_size: u16,
+    // Spacing between lines
+    spacing: f32,
+) -> (f32, f32) {
+    let font_line_distance = match font.font.horizontal_line_metrics(1.0) {
+        Some(metrics) => metrics.new_line_size,
+        None => font_size,
+    };
+
+    let lines: Vec<&str> = text.split('\n').collect();
+
+    // Height of a single line
+    let m = measure_text("Ay", Some(font), font_size, 1.0);
+    let line_height = m.height;
+
+    let total_height = lines.len() as f32 * line_height;
+
+    // Width = widest line
+    let max_width = lines
+        .iter()
+        .map(|line| measure_text(line, Some(font), font_size, 1.0).width)
+        .fold(0.0, f32::max);
+
+    (max_width, total_height)
 }

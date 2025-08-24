@@ -1,19 +1,25 @@
 use crate::*;
 
-const PREFIX_SEGONS_MIDA: [&str; 11] = ["?", "met", "et", "prop", "but", "pent", "hexa", "hept", "oct", "non", "dec"];
+const PREFIX_SEGONS_MIDA: [&str; 11] = [
+    "?", "met", "et", "prop", "but", "pent", "hexa", "hept", "oct", "non", "dec",
+];
 
 // TODO: Press N or something to get the name of the molecule you're hovering over (i.e. only name
 //       its connected graph). Print "nothing under cursor" instead if there's nothing there
-// 
+//
 // Return value may also be an error message to be displayed directly (too lazy to make a proper
 // error enum and impl Display on it)
 pub fn anomena(input: &[UiBlock], source: &UiBlock) -> String {
-    let index = input.iter().position(|b| b.id == source.id)
+    let index = input
+        .iter()
+        .position(|b| b.id == source.id)
         .expect("block existed and then didn't in the same frame");
-    let Ok(molecula) = find_connex(input, index) else { return "ERR: La molecula conté un cicle :c".to_string() };
+    let Ok(molecula) = find_connex(input, index) else {
+        return "ERR: La molecula conté un cicle :c".to_string();
+    };
     let links = UiBlock::count_links(&molecula);
 
-    if !molecula.iter().any(|b| b.radical.contains_carbon()) { 
+    if !molecula.iter().any(|b| b.radical.contains_carbon()) {
         return "ERR: La molecula (sota el cursor) ha de contindre carboni".to_string();
     }
     return "Encara noooo".to_string();
@@ -21,7 +27,7 @@ pub fn anomena(input: &[UiBlock], source: &UiBlock) -> String {
 
     // 1. S'ha de triar la funció principal a partir de l'ordre de prioritat.
     // 2. S'ha de triar la cadena principal aplicant les normes, en l'ordre en què figuren a la llista, fins trobar-ne una que decideixi, en cas de dues o més cadenes iguals:
-    //    a) aquella que conté el grup principal 
+    //    a) aquella que conté el grup principal
     //    b) aquella que té més grups principals
     //    c) aquella més insaturada (amb més dobles i triples enllaços en conjunt)
     //    d) aquella més llarga
@@ -39,42 +45,49 @@ pub fn anomena(input: &[UiBlock], source: &UiBlock) -> String {
     // 4. Es forma el nom, començant pels substituents en ordre alfabètic o de complexitat; a
     // continuació la cadena principal acabada amb la terminació del grup principal
 
- 
     // TODO: ASSUMEIXO HIDROCARBUR PER ARA
 
     // 1. Trio funció principal
     let principal = {
         let v = molecula.iter().map(|b| b.radical).collect::<Vec<_>>();
         v.sort();
-        v.first().expect("cannot be empty, we're given at least one block of it")
+        v.first()
+            .expect("cannot be empty, we're given at least one block of it")
     };
 }
 
 fn get_adjacent(g: &[UiBlock], index: usize) -> Vec<usize> {
     let adj_ids = &g[index].links;
-    adj_ids.iter()
+    adj_ids
+        .iter()
         .map(|id| g.iter().position(|b| b.id == *id).unwrap())
         .collect()
 }
 
 /// Ok(nodes) | Err(There's a cycle)
 fn find_connex(g: &[UiBlock], index: usize) -> Result<Vec<UiBlock>, ()> {
-    fn go(g: &[UiBlock], seen: &mut [bool], i: usize, prev: usize) -> bool { // bool is cycle
-        if seen[i] { return true }
+    fn go(g: &[UiBlock], seen: &mut [bool], i: usize, prev: usize) -> bool {
+        // bool is cycle
+        if seen[i] {
+            return true;
+        }
         seen[i] = true;
-        for adj_idx in get_adjacent(g, i).into_iter().filter(|&x|x!=prev) {
-            if go(g, seen, adj_idx, i) { return true }
+        for adj_idx in get_adjacent(g, i).into_iter().filter(|&x| x != prev) {
+            if go(g, seen, adj_idx, i) {
+                return true;
+            }
         }
         false
     }
 
     let mut seen = vec![false; g.len()];
-    if go(g, &mut seen, index, index) { 
+    if go(g, &mut seen, index, index) {
         Err(())
     } else {
-        Ok(g.iter().cloned()
-           .enumerate()
-           .filter_map(|(i, n)| seen[i].then_some(n) )
-           .collect())
+        Ok(g.iter()
+            .cloned()
+            .enumerate()
+            .filter_map(|(i, n)| seen[i].then_some(n))
+            .collect())
     }
 }

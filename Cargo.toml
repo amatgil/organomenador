@@ -2,6 +2,9 @@
 name = "organomenador"
 version = "0.1.0"
 edition = "2024"
+description = "Anomena mol·lècules orgàniques"
+repository = "github.com/amatgil/organomenador"
+license = "GPL"
 
 [dependencies]
 #macroquad = "0.4.14"

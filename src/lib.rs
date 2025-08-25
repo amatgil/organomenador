@@ -437,7 +437,7 @@ fn undo_action(st: &mut UiState, action: UiAction) {
             }
         }
         UiAction::MoveRadicals(data) => {
-            for (id, from, to) in data {
+            for (id, from, _to) in data {
                 if let Some(block) = st.uiblocks.iter_mut().find(|b| b.id == id) {
                     block.pos = from;
                 }
@@ -519,8 +519,8 @@ pub fn cursor_on_link(mouse: Vec2, a: &UiBlock, b: &UiBlock, multiplicitat: usiz
 pub fn generate_random_id() -> Id {
     // lmao
     // assumes Id = u128
-    (rand() as u128) << 32 * 3
-        | (rand() as u128) << 32 * 2
-        | (rand() as u128) << 32 * 1
-        | (rand() as u128) << 32 * 0
+    (rand() as u128) << (32 * 3)
+        | (rand() as u128) << (32 * 2)
+        | (rand() as u128) << 32
+        | (rand() as u128)
 }

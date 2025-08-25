@@ -53,12 +53,7 @@ async fn main() {
     let help_text = {
         let mut t = String::new();
         for (k, r) in KEYMAP {
-            _ = write!(
-                t,
-                "{} -> Afegeix {}\n",
-                format!("{k:?}").replace("KEY_", ""),
-                r
-            );
+            _ = writeln!(t, "{k:?} -> Afegeix {r}",);
         }
         t.push_str("X -> Elimina\n");
         t.push_str("N -> Anomena mol. sota cursor\n");
@@ -78,8 +73,8 @@ async fn main() {
 
         // ==== Adjust positions when rescaling ====
         let rescale_factor = Vec2 {
-            x: screen_width() as f32 / st.window_dims.0 as f32,
-            y: screen_height() as f32 / st.window_dims.1 as f32,
+            x: screen_width() / st.window_dims.0,
+            y: screen_height() / st.window_dims.1,
         };
         st.window_dims = (screen_width(), screen_height());
         for block in &mut st.uiblocks {
@@ -153,14 +148,13 @@ async fn main() {
             (Some(Held::Link { radical: s_id, .. }), false) => {
                 if let Some((dest_id, ..)) =
                     link_node_at_point(&st.uiblocks, curr_mouse_pos, LINK_CIRCLE_CLICKING_THRESHOLD)
+                    && *s_id != dest_id
                 {
-                    if *s_id != dest_id {
-                        let (source, dest) =
-                            get_two_blocks_unchecked_mut(&mut st.uiblocks, *s_id, dest_id);
-                        source.links.push(dest_id);
-                        dest.links.push(*s_id);
-                        st.push_to_undo(UiAction::AddLink(*s_id, dest_id));
-                    }
+                    let (source, dest) =
+                        get_two_blocks_unchecked_mut(&mut st.uiblocks, *s_id, dest_id);
+                    source.links.push(dest_id);
+                    dest.links.push(*s_id);
+                    st.push_to_undo(UiAction::AddLink(*s_id, dest_id));
                 }
                 st.held = None;
             }
@@ -174,11 +168,9 @@ async fn main() {
         if is_mouse_button_down(MouseButton::Right) {
             // TODO: if over a radical, interpret that as initiating holding a link
             match st.held {
-                Some(Held::Radicals(data)) => {
-                    _ = data.iter().for_each(|(id, from)| {
-                        get_block_unchecked_mut(&mut st.uiblocks, *id).pos = *from
-                    })
-                }
+                Some(Held::Radicals(data)) => data.iter().for_each(|(id, from)| {
+                    get_block_unchecked_mut(&mut st.uiblocks, *id).pos = *from
+                }),
                 Some(Held::Link { .. } | Held::RectangleCreation { .. }) | None => {}
             }
             st.held = None;
@@ -334,11 +326,11 @@ fn draw_links(st: &UiState) {
 }
 
 fn draw_naming_text(text: &String, apl387: &Rc<Font>, st: &UiState) {
-    let text_dims = measure_text(&text, Some(&**apl387), B::FONT_SIZE, 1.0);
+    let text_dims = measure_text(text, Some(&**apl387), B::FONT_SIZE, 1.0);
     draw_text_ex(
         text,
-        st.window_dims.0 as f32 / 2.0 - text_dims.width / 2.0,
-        st.window_dims.1 as f32 - text_dims.height,
+        st.window_dims.0 / 2.0 - text_dims.width / 2.0,
+        st.window_dims.1 - text_dims.height,
         TextParams {
             font: Some(&**apl387),
             font_size: B::FONT_SIZE,
@@ -400,7 +392,6 @@ fn draw_uiblock(block: &UiBlock, font: &Rc<Font>) {
 /// the radius `r` and the amount of sides `sides`
 ///
 /// The point `p` is as if it were the top-left of a non-rounded rectangle
-
 fn draw_rounded_rectangle_lines(p: Vec2, w: f32, h: f32, r: f32, sides: u8, th: f32, color: Color) {
     let line = |p1: Vec2, p2: Vec2| draw_line(p1.x, p1.y, p2.x, p2.y, th, color);
     let arc = |p: Vec2, start: f32| draw_arc(p.x, p.y, sides, r - th / 2.0, start, th, 90.0, color);

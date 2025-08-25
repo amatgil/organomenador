@@ -32,7 +32,17 @@ use UiBlock as B;
 // TODO: Maybe, bulk select to move?
 // TODO: add a readme
 
-#[macroquad::main("organomenador")]
+fn window_conf() -> Conf {
+    Conf {
+        window_title: "organomenador".to_owned(),
+        fullscreen: false,
+        sample_count: 4,
+        window_resizable: true,
+        ..Default::default()
+    }
+}
+
+#[macroquad::main(window_conf)]
 async fn main() {
     // SETUP
     let apl387 =

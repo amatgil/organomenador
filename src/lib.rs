@@ -41,6 +41,17 @@ pub struct UiState {
 }
 
 impl UiState {
+    pub fn new(width: f32, height: f32) -> Self {
+        Self {
+            uiblocks: vec![],
+            held: None,
+            is_help_up: false,
+            undo_list: vec![],
+            redo_list: vec![],
+            window_dims: (width, height),
+            naming_text: None,
+        }
+    }
     pub fn push_to_undo(&mut self, a: UiAction) {
         self.undo_list.push(a);
         self.redo_list.clear();
@@ -81,8 +92,8 @@ impl UiBlock {
     }
     pub fn center(&self) -> Vec2 {
         let (width, height) = (self.dims().width, self.dims().height);
-        let x = self.pos.x - Self::PAD_H + f32::midpoint(Self::PAD_V * 2.0, width);
-        let y = self.pos.y - Self::PAD_V + f32::midpoint(Self::PAD_V * 2.0, height);
+        let x = self.pos.x - Self::PAD_H + f32::midpoint(Self::PAD_H * 2.0, width);
+        let y = self.pos.y - height / 2.0;
         Vec2 { x, y }
     }
 
@@ -104,11 +115,11 @@ impl UiBlock {
         };
         let up = Vec2 {
             x: mid_width,
-            y: self.pos.y - Self::PAD_V - Self::LINK_PAD,
+            y: self.pos.y - Self::PAD_V - Self::LINK_PAD - height,
         };
         let down = Vec2 {
             x: mid_width,
-            y: self.pos.y + Self::PAD_V + Self::LINK_PAD + height,
+            y: self.pos.y + Self::PAD_V + Self::LINK_PAD,
         };
 
         [up, left, down, right]
@@ -295,9 +306,9 @@ pub fn is_point_in_block(p: Vec2, b: &UiBlock) -> bool {
         p,
         Rectangle {
             x: b.pos.x - B::PAD_H,
-            y: b.pos.y - B::PAD_V,
+            y: b.pos.y - (b.dims().height + B::PAD_V),
             w: b.dims().width + 2.0 * B::PAD_H,
-            h: b.dims().height + 2.0 * B::PAD_H,
+            h: b.dims().height + 2.0 * B::PAD_V,
         },
     )
 }
@@ -332,6 +343,8 @@ pub fn link_node_at_point(
     None
 }
 
+// TODO: The uiblocks should be sorted so these can be searched through with
+// binary search, probably
 pub fn get_block_unchecked(blocks: &[UiBlock], id: Id) -> &UiBlock {
     blocks
         .iter()
@@ -503,7 +516,7 @@ pub fn cursor_on_link(mouse: Vec2, a: &UiBlock, b: &UiBlock, multiplicitat: usiz
     // Assuming the line flows from c1->c2
 
     let slope = (c2.y - c1.y) / (c2.x - c1.x);
-    let max_dist = (LINK_LINE_THICKNESS * 2.0 - 1.0) * 1.5; // give 50% margin
+    let max_dist = (multiplicitat as f32 * LINK_LINE_THICKNESS * 2.0 - 1.0) * 1.5; // give 50% margin
     let dist = {
         // line<->point distance
         let (a, b, c) = (slope, -1.0, c1.y - slope * c1.x);

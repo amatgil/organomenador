@@ -58,13 +58,6 @@ impl UiState {
     }
 }
 
-pub struct Rectangle {
-    x: f32,
-    y: f32,
-    w: f32,
-    h: f32,
-}
-
 /// A building block of the UI; a node in the network
 #[derive(Debug, Clone)]
 pub struct UiBlock {
@@ -155,6 +148,16 @@ impl UiBlock {
             *m /= 2;
         } // don't double count
         links
+    }
+
+    /// Includes padding
+    pub fn bounding_rect(&self) -> Rect {
+        Rect {
+            x: self.pos.x - Self::PAD_H,
+            y: self.pos.y - (self.dims().height + Self::PAD_V),
+            w: self.dims().width + 2.0 * Self::PAD_H,
+            h: self.dims().height + 2.0 * Self::PAD_V,
+        }
     }
 }
 
@@ -296,21 +299,14 @@ impl UiAction {
     }
 }
 
-pub fn is_point_in_rect(p: Vec2, rect: Rectangle) -> bool {
-    (p.x >= rect.x && p.x <= rect.x + rect.w) && (p.y >= rect.y && p.y <= rect.y + rect.h)
+pub fn is_point_in_rect(p: Vec2, rect: Rect) -> bool {
+    rect.contains(p)
+    //(p.x >= rect.x && p.x <= rect.x + rect.w) && (p.y >= rect.y && p.y <= rect.y + rect.h)
 }
 
 pub fn is_point_in_block(p: Vec2, b: &UiBlock) -> bool {
     use UiBlock as B;
-    is_point_in_rect(
-        p,
-        Rectangle {
-            x: b.pos.x - B::PAD_H,
-            y: b.pos.y - (b.dims().height + B::PAD_V),
-            w: b.dims().width + 2.0 * B::PAD_H,
-            h: b.dims().height + 2.0 * B::PAD_V,
-        },
-    )
+    is_point_in_rect(p, b.bounding_rect())
 }
 
 pub fn get_block_under_point(bs: &[UiBlock], cursor: Vec2) -> Option<&UiBlock> {

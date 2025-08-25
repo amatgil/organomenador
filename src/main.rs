@@ -353,22 +353,11 @@ fn draw_naming_text(text: &String, apl387: &Rc<Font>, st: &UiState) {
 fn draw_uiblock(block: &UiBlock, font: &Rc<Font>) {
     let text = &block.radical.to_string();
     let font = Some(&**font);
-    let dims = measure_text(text, font, B::FONT_SIZE, 1.0);
-    draw_rectangle(
-        block.pos.x - B::PAD_H,
-        block.pos.y - (dims.height + B::PAD_V),
-        block.dims().width + 2.0 * B::PAD_H,
-        block.dims().height + 2.0 * B::PAD_V,
-        WHITE,
-    );
-    draw_rectangle_lines(
-        block.pos.x - B::PAD_H,
-        block.pos.y - (dims.height + B::PAD_V),
-        block.dims().width + 2.0 * B::PAD_H,
-        block.dims().height + 2.0 * B::PAD_V,
-        B::LINE_THICKNESS,
-        BLACK,
-    );
+
+    let r = block.bounding_rect();
+
+    draw_rectangle(r.x, r.y, r.w, r.h, WHITE);
+    draw_rectangle_lines(r.x, r.y, r.w, r.h, B::LINE_THICKNESS, BLACK);
     draw_text_ex(
         text,
         block.pos.x,

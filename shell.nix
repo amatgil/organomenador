@@ -7,7 +7,7 @@ let
     rust-analyzer
     rustfmt
     mold
-    rust-bin.stable.latest.default
+    #rust-bin.stable.latest.default
     cmake
 
     pkg-config
@@ -29,9 +29,9 @@ let
 
     pkg-config
 
-    # (rust-bin.stable.latest.default.override {
-    #   targets = [ "wasm32-unknown-unknown" ];
-    # })
+    (rust-bin.stable.latest.default.override {
+      targets = [ "wasm32-unknown-unknown" ];
+    })
   ];
 in
 pkgs.mkShell {

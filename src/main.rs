@@ -1,7 +1,7 @@
 use macroquad::color::colors::*;
 use macroquad::prelude::*;
 use macroquad::rand::*;
-use organomenar::*;
+use organomenador::*;
 use std::fmt::Write;
 use std::rc::Rc;
 
@@ -290,8 +290,11 @@ async fn main() {
 
         if st.is_help_up {
             let baseline = HELP_TEXT_FONTSIZE as f32;
-            let (t_width, t_height) =
-                measure_multiline_text(&help_text, Some(&*apl387), HELP_TEXT_FONTSIZE, todo!());
+            let TextDimensions {
+                width: t_width,
+                height: t_height,
+                ..
+            } = measure_multiline_text(&help_text, Some(&*apl387), HELP_TEXT_FONTSIZE, 1.0, None);
 
             draw_rectangle(
                 0.0,
@@ -361,34 +364,4 @@ async fn main() {
         }
         next_frame().await;
     }
-}
-
-// Mandatory font because i'm only gonna use this with my font
-fn measure_multiline_text(
-    text: &str,
-    font: &Font,
-    font_size: u16,
-    // Spacing between lines
-    spacing: f32,
-) -> (f32, f32) {
-    let font_line_distance = match font.font.horizontal_line_metrics(1.0) {
-        Some(metrics) => metrics.new_line_size,
-        None => font_size,
-    };
-
-    let lines: Vec<&str> = text.split('\n').collect();
-
-    // Height of a single line
-    let m = measure_text("Ay", Some(font), font_size, 1.0);
-    let line_height = m.height;
-
-    let total_height = lines.len() as f32 * line_height;
-
-    // Width = widest line
-    let max_width = lines
-        .iter()
-        .map(|line| measure_text(line, Some(font), font_size, 1.0).width)
-        .fold(0.0, f32::max);
-
-    (max_width, total_height)
 }

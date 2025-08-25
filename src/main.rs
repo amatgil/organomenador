@@ -107,7 +107,7 @@ async fn main() {
                 if let Some(index) = st
                     .uiblocks
                     .iter()
-                    .position(|b| is_point_in_block(curr_mouse_pos, b))
+                    .position(|b| b.bounding_rect().contains(curr_mouse_pos))
                 {
                     st.held = Some(Held::Radicals(vec![(
                         st.uiblocks[index].id,

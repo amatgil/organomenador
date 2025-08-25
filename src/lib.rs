@@ -299,18 +299,8 @@ impl UiAction {
     }
 }
 
-pub fn is_point_in_rect(p: Vec2, rect: Rect) -> bool {
-    rect.contains(p)
-    //(p.x >= rect.x && p.x <= rect.x + rect.w) && (p.y >= rect.y && p.y <= rect.y + rect.h)
-}
-
-pub fn is_point_in_block(p: Vec2, b: &UiBlock) -> bool {
-    use UiBlock as B;
-    is_point_in_rect(p, b.bounding_rect())
-}
-
 pub fn get_block_under_point(bs: &[UiBlock], cursor: Vec2) -> Option<&UiBlock> {
-    bs.iter().find(|b| is_point_in_block(cursor, b))
+    bs.iter().find(|b| b.bounding_rect().contains(cursor))
 }
 
 pub fn remove_hanging_links(blocks: &mut Vec<UiBlock>, del_id: Id) {
@@ -475,7 +465,7 @@ pub fn delete_under_cursor(st: &mut UiState, curr_mouse_pos: Vec2) {
     if let Some(index) = st
         .uiblocks
         .iter()
-        .position(|b| is_point_in_block(curr_mouse_pos, b))
+        .position(|b| b.bounding_rect().contains(curr_mouse_pos))
     {
         let what = st.uiblocks.remove(index);
         remove_hanging_links(&mut st.uiblocks, what.id);

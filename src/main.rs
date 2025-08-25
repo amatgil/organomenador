@@ -8,6 +8,7 @@ use std::rc::Rc;
 const APL387_BYTES: &[u8] = include_bytes!("../APL387.ttf");
 const HELP_TEXT_FONTSIZE: u16 = 20;
 const LINK_CIRCLE_CLICKING_THRESHOLD: f32 = 20.0;
+const SELECTION_COLOR: Color = Color::new(0.0, 0.0, 0.5, 0.5);
 const KEYMAP: [(KeyCode, UiRadical); 15] = [
     (KeyCode::C, UiRadical::C),
     (KeyCode::Q, UiRadical::C),
@@ -224,84 +225,24 @@ async fn main() {
 
         //  ===== Drawing and such =====
         clear_background(WHITE);
-        // links first
-        for ((a_id, b_id), m) in UiBlock::count_links(&st.uiblocks) {
-            let b = get_block_unchecked(&st.uiblocks, a_id);
-            let bp = get_block_unchecked(&st.uiblocks, b_id);
-            let [a, b] = get_points_for_link(b, bp);
-
-            // This is cheating! For drawing double/triple bonds >:3
-            for (i, t) in (1..=(2 * m - 1)).rev().step_by(2).enumerate() {
-                let color = if i % 2 != 0 { WHITE } else { BLACK };
-                draw_line(a.x, a.y, b.x, b.y, LINK_LINE_THICKNESS * (t as f32), color);
-            }
-        }
-
-        // radicals last
+        draw_links(&st);
         for block in &st.uiblocks {
-            // TODO: make these rounded
-            //draw_rectangle_rounded(
-            //    Rectangle {
-            //        w: block.dims().width + 2.0 * B::PAD_H,
-            //        h: block.dims().height + 2.0 * B::PAD_V,
-            //        x: block.pos.x - B::PAD_H,
-            //        y: block.pos.y - B::PAD_V,
-            //    },
-            //    B::ROUNDNESS,
-            //    B::SEGMENTS,
-            //    WHITE,
-            //);
             draw_uiblock(block, &apl387);
         }
-
-        if st.naming_text.is_none() {
-            draw_text_ex(
-                "H: Ajuda",
-                10.0,
-                st.window_dims.1 - HELP_TEXT_FONTSIZE as f32 / 2.0,
-                TextParams {
-                    font: Some(&*apl387),
-                    font_size: HELP_TEXT_FONTSIZE,
-                    color: BLACK,
-                    ..Default::default()
-                },
-            );
+        draw_help_keybind_text(&st, &apl387);
+        draw_help_text(&st, &help_text, &apl387);
+        draw_held(&st, curr_mouse_pos);
+        if let Some(text) = &st.naming_text {
+            draw_naming_text(text, &apl387, &st);
         }
 
-        if st.is_help_up {
-            let baseline = HELP_TEXT_FONTSIZE as f32;
-            let TextDimensions {
-                width: t_width,
-                height: t_height,
-                ..
-            } = measure_multiline_text(&help_text, Some(&*apl387), HELP_TEXT_FONTSIZE, 1.0, None);
+        next_frame().await;
+    }
+}
 
-            draw_rectangle(
-                0.0,
-                0.0,
-                t_width,
-                t_height,
-                Color {
-                    r: 1.0,
-                    g: 1.0,
-                    b: 1.0,
-                    a: 0.5,
-                },
-            );
-            draw_multiline_text_ex(
-                &help_text,
-                10.0,
-                baseline + 5.0,
-                None,
-                TextParams {
-                    font: Some(&*apl387),
-                    font_size: HELP_TEXT_FONTSIZE,
-                    color: BLACK,
-                    ..Default::default()
-                },
-            );
-        }
-        if let Some(Held::Link { from, .. }) = st.held {
+fn draw_held(st: &UiState, curr_mouse_pos: Vec2) {
+    match st.held {
+        Some(Held::Link { from, .. }) => {
             draw_line(
                 from.x,
                 from.y,
@@ -310,7 +251,8 @@ async fn main() {
                 LINK_LINE_THICKNESS,
                 BLACK,
             );
-        } else if let Some(Held::RectangleCreation { from }) = st.held {
+        }
+        Some(Held::RectangleCreation { from }) => {
             let to = curr_mouse_pos;
             // TODO: roundedness?
             draw_rectangle(
@@ -318,18 +260,76 @@ async fn main() {
                 from.y.min(to.y),
                 (from.x - to.x).abs(),
                 (from.y - to.y).abs(),
-                Color {
-                    r: 0.0,
-                    g: 0.0,
-                    b: 0.5,
-                    a: 0.5,
-                },
+                SELECTION_COLOR,
             );
         }
-        if let Some(text) = &st.naming_text {
-            draw_naming_text(text, &apl387, &st);
+        _ => {}
+    }
+}
+
+fn draw_help_text(st: &UiState, help_text: &String, apl387: &Rc<Font>) {
+    if st.is_help_up {
+        let baseline = HELP_TEXT_FONTSIZE as f32;
+        let TextDimensions {
+            width: t_width,
+            height: t_height,
+            ..
+        } = measure_multiline_text(help_text, Some(&**apl387), HELP_TEXT_FONTSIZE, 1.0, None);
+
+        draw_rectangle(
+            0.0,
+            0.0,
+            t_width,
+            t_height,
+            Color {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+                a: 0.5,
+            },
+        );
+        draw_multiline_text_ex(
+            help_text,
+            10.0,
+            baseline + 5.0,
+            None,
+            TextParams {
+                font: Some(&**apl387),
+                font_size: HELP_TEXT_FONTSIZE,
+                color: BLACK,
+                ..Default::default()
+            },
+        );
+    }
+}
+
+fn draw_help_keybind_text(st: &UiState, apl387: &Rc<Font>) {
+    if st.naming_text.is_none() {
+        draw_text_ex(
+            "H: Ajuda",
+            10.0,
+            st.window_dims.1 - HELP_TEXT_FONTSIZE as f32 / 2.0,
+            TextParams {
+                font: Some(&**apl387),
+                font_size: HELP_TEXT_FONTSIZE,
+                color: BLACK,
+                ..Default::default()
+            },
+        );
+    }
+}
+
+fn draw_links(st: &UiState) {
+    for ((a_id, b_id), m) in UiBlock::count_links(&st.uiblocks) {
+        let b = get_block_unchecked(&st.uiblocks, a_id);
+        let bp = get_block_unchecked(&st.uiblocks, b_id);
+        let [a, b] = get_points_for_link(b, bp);
+
+        // This is cheating! For drawing double/triple bonds >:3
+        for (i, t) in (1..=(2 * m - 1)).rev().step_by(2).enumerate() {
+            let color = if i % 2 != 0 { WHITE } else { BLACK };
+            draw_line(a.x, a.y, b.x, b.y, LINK_LINE_THICKNESS * (t as f32), color);
         }
-        next_frame().await;
     }
 }
 
@@ -351,6 +351,18 @@ fn draw_naming_text(text: &String, apl387: &Rc<Font>, st: &UiState) {
 }
 
 fn draw_uiblock(block: &UiBlock, font: &Rc<Font>) {
+    // TODO: make these rounded
+    //draw_rectangle_rounded(
+    //    Rectangle {
+    //        w: block.dims().width + 2.0 * B::PAD_H,
+    //        h: block.dims().height + 2.0 * B::PAD_V,
+    //        x: block.pos.x - B::PAD_H,
+    //        y: block.pos.y - B::PAD_V,
+    //    },
+    //    B::ROUNDNESS,
+    //    B::SEGMENTS,
+    //    WHITE,
+    //);
     let text = &block.radical.to_string();
     let font = Some(&**font);
 

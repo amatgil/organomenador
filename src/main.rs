@@ -153,11 +153,13 @@ async fn main() {
                 if let Some((dest_id, ..)) =
                     link_node_at_point(&st.uiblocks, curr_mouse_pos, LINK_CIRCLE_CLICKING_THRESHOLD)
                 {
-                    let (source, dest) =
-                        get_two_blocks_unchecked_mut(&mut st.uiblocks, *s_id, dest_id);
-                    source.links.push(dest_id);
-                    dest.links.push(*s_id);
-                    st.push_to_undo(UiAction::AddLink(*s_id, dest_id));
+                    if *s_id != dest_id {
+                        let (source, dest) =
+                            get_two_blocks_unchecked_mut(&mut st.uiblocks, *s_id, dest_id);
+                        source.links.push(dest_id);
+                        dest.links.push(*s_id);
+                        st.push_to_undo(UiAction::AddLink(*s_id, dest_id));
+                    }
                 }
                 st.held = None;
             }

@@ -369,7 +369,15 @@ fn draw_uiblock(block: &UiBlock, font: &Rc<Font>) {
     let r = block.bounding_rect();
 
     draw_rectangle(r.x, r.y, r.w, r.h, WHITE);
-    draw_rectangle_lines(r.x, r.y, r.w, r.h, B::LINE_THICKNESS, BLACK);
+    draw_rounded_rectangle_lines(
+        Vec2 { x: r.x, y: r.y },
+        r.w,
+        r.h,
+        B::ROUNDNESS,
+        B::SIDES,
+        B::LINE_THICKNESS,
+        BLACK,
+    );
     draw_text_ex(
         text,
         block.pos.x,
@@ -385,4 +393,62 @@ fn draw_uiblock(block: &UiBlock, font: &Rc<Font>) {
     for center in block.link_positions() {
         draw_circle(center.x, center.y, B::LINK_CIRCLE_RADIUS, SKYBLUE);
     }
+}
+
+/// Draw a rounded rect's lines with at point `p` with width `w` and height `h`
+/// with line thickness `th` and color `color`. The roundness is determined by
+/// the radius `r` and the amount of sides `sides`
+///
+/// The point `p` is as if it were the top-left of a non-rounded rectangle
+
+fn draw_rounded_rectangle_lines(p: Vec2, w: f32, h: f32, r: f32, sides: u8, th: f32, color: Color) {
+    let line = |p1: Vec2, p2: Vec2| draw_line(p1.x, p1.y, p2.x, p2.y, th, color);
+    let arc = |p: Vec2, start: f32| draw_arc(p.x, p.y, sides, r - th / 2.0, start, th, 90.0, color);
+    let v = |x, y| Vec2 { x, y };
+    let z = 0.0; // zero
+
+    // p h------------a q
+    //  /              \
+    // g l            i b
+    // |                |
+    // |                |
+    // |                |
+    // f k            j c
+    //  \              /
+    // s e------------d t
+    //
+    // - p is the point associated with the arguments
+    // - bcfg form an internal rectangle
+    // - |gh| = 2r
+    // - |gb| = w
+    // - |eh| = h
+
+    let q = p + v(w, z);
+    let s = p + v(z, h);
+    let t = p + v(w, h);
+
+    let h = p + v(r, z);
+    let g = p + v(z, r);
+    let l = p + v(r, r);
+
+    let a = q + v(-r, z);
+    let b = q + v(z, r);
+    let i = q + v(-r, r);
+
+    let c = t + v(z, -r);
+    let d = t + v(-r, z);
+    let j = t + v(-r, -r);
+
+    let f = s + v(z, -r);
+    let e = s + v(r, z);
+    let k = s + v(r, -r);
+
+    line(h, a);
+    line(b, c);
+    line(d, e);
+    line(f, g);
+    arc(j, 0.0);
+    arc(k, 90.0);
+    arc(l, 180.0);
+    arc(i, 270.0);
 }

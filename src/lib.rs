@@ -75,8 +75,8 @@ impl UiBlock {
     pub const LINK_PAD: f32 = 10.0 + Self::LINK_CIRCLE_RADIUS;
     pub const FONT_SIZE: u16 = 30;
     pub const SPACING: f32 = 0.5; // I don't know what this does but raylib asks for it
-    pub const ROUNDNESS: f32 = 0.75;
-    pub const SEGMENTS: i32 = 20;
+    pub const ROUNDNESS: f32 = 10.0;
+    pub const SIDES: u8 = 20;
     pub const LINE_THICKNESS: f32 = 4.0;
 
     pub fn dims(&self) -> TextDimensions {

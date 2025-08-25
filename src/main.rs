@@ -74,7 +74,7 @@ fn main() {
     };
 
     let mut curr_mouse_pos = rl.get_mouse_position();
-    let mut mouse_delta = Vector2 { x: 0.0, y: 0.0 };
+    let mut mouse_delta: Vector2;
     while !rl.window_should_close() {
         use UiBlock as B;
 

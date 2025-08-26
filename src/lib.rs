@@ -569,3 +569,7 @@ pub fn is_block_selected(held: &Option<Held>, id: Id) -> bool {
         }
     }
 }
+
+pub fn is_control_down() -> bool {
+    is_key_down(KeyCode::LeftControl) || is_key_down(KeyCode::RightControl)
+}

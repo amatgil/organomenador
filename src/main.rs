@@ -96,16 +96,12 @@ async fn main() {
         }
 
         // ===== Handle clicking =====
-        match (&st.held, is_mouse_button_down(MouseButton::Left)) {
+        match (&mut st.held, is_mouse_button_down(MouseButton::Left)) {
             // We just clicked leftclick
             (None, true) => {
-                if let Some(index) = st
-                    .uiblocks
-                    .iter()
-                    .position(|b| b.bounding_rect().contains(curr_mouse_pos))
-                {
-                    let data = vec![(st.uiblocks[index].id, st.uiblocks[index].pos)];
-                    if is_key_down(KeyCode::LeftControl) || is_key_down(KeyCode::RightControl) {
+                if let Some(block) = get_block_under_point(&st.uiblocks, curr_mouse_pos) {
+                    let data = vec![(block.id, block.pos)];
+                    if is_control_down() {
                         st.held = Some(Held::Selection(data));
                     } else {
                         st.held = Some(Held::Radicals(data));
@@ -151,11 +147,12 @@ async fn main() {
                     link_node_at_point(&st.uiblocks, curr_mouse_pos, LINK_CIRCLE_CLICKING_THRESHOLD)
                     && *s_id != dest_id
                 {
+                    let s_id = *s_id;
                     let (source, dest) =
-                        get_two_blocks_unchecked_mut(&mut st.uiblocks, *s_id, dest_id);
+                        get_two_blocks_unchecked_mut(&mut st.uiblocks, s_id, dest_id);
                     source.links.push(dest_id);
-                    dest.links.push(*s_id);
-                    st.push_to_undo(UiAction::AddLink(*s_id, dest_id));
+                    dest.links.push(s_id);
+                    st.push_to_undo(UiAction::AddLink(s_id, dest_id));
                 }
                 st.held = None;
             }
@@ -179,9 +176,12 @@ async fn main() {
             // Selection exists and we've clicked
             // Depends on if we're clicking on a block or on the background
             (Some(Held::Selection(data)), true) => {
-                if get_block_under_point(&st.uiblocks, curr_mouse_pos).is_some() {
-                    // I don't like this clone here :/
-                    st.held = Some(Held::SelectionDrag(data.clone()));
+                if let Some(block) = get_block_under_point(&st.uiblocks, curr_mouse_pos) {
+                    if is_control_down() {
+                        data.push((block.id, block.pos));
+                    } else {
+                        st.held = Some(Held::SelectionDrag(data.clone())); // I don't like this clone here :/
+                    }
                 } else {
                     st.held = None;
                 }

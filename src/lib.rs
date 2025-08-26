@@ -27,8 +27,11 @@ pub const LINK_MARGIN_BETWEEN_RADICAL: f32 = 10.0;
 pub const LINK_LINE_THICKNESS: f32 = 3.0;
 
 pub struct UiState {
+    /// The radicals shown
     pub uiblocks: Vec<UiBlock>,
+    /// What is the cursor holding
     pub held: Option<Held>,
+    /// is the help text currently displayed
     pub is_help_up: bool,
     /// for undoing (DO NOT PUSH TO MANUALLY, USE `push_to_undo`)
     pub undo_list: Vec<UiAction>,
@@ -302,15 +305,15 @@ pub enum UiAction {
 }
 
 impl UiAction {
-    pub fn opposite(&self) -> Self {
+    pub fn opposite(self) -> Self {
         match self {
             Self::AddRadical(what) => Self::DeleteRadical(what.clone()),
             Self::DeleteRadical(what) => Self::AddRadical(what.clone()),
             Self::MoveRadicals(data) => {
-                Self::MoveRadicals(data.iter().map(|(i, f, t)| (*i, *t, *f)).collect())
+                Self::MoveRadicals(data.into_iter().map(|(i, f, t)| (i, t, f)).collect())
             }
-            Self::AddLink(a, b) => Self::DeleteLink(*b, *a),
-            Self::DeleteLink(a, b) => Self::AddLink(*b, *a),
+            Self::AddLink(a, b) => Self::DeleteLink(b, a),
+            Self::DeleteLink(a, b) => Self::AddLink(b, a),
         }
     }
 }
@@ -379,50 +382,7 @@ pub fn get_block_unchecked_mut(blocks: &mut [UiBlock], id: Id) -> &mut UiBlock {
 }
 
 pub fn get_points_for_link(b: &UiBlock, bp: &UiBlock) -> [Vec2; 2] {
-    let TextDimensions {
-        width: b_w,
-        height: b_h,
-        ..
-    } = b.dims();
-    let TextDimensions {
-        width: bp_w,
-        height: bp_h,
-        ..
-    } = bp.dims();
-    let b_c = b.center();
-    let bp_c = bp.center();
-    let m = LINK_MARGIN_BETWEEN_RADICAL;
-
-    //let angle = ;
-
-    // What follows is incredibly scuffed
-    // We divide the line into three cases (per rectangle): closest to short, closest
-    // to long and closest to corner.
-
-    // Assuming we're 'close' to top right corner
-    // A is the 'bottom' point of the rounding circle
-    // B is the 'left' point of the rounding circle
-    // i.e. they're both the same distance away from the corner (m)
-    //
-    // +--------B--+
-    // |           |
-    // |           A
-    // |           |
-    // |           |
-    // +-----------+
-    let a = Vec2 {
-        x: b_c.x + b_w / 2.0,
-        y: b_c.y + b_h / 2.0 - m,
-    };
-    let b = Vec2 {
-        x: b_c.x + b_w / 2.0 - m,
-        y: b_c.y + b_h / 2.0,
-    };
-    let alpha = (a.y / a.x).atan();
-    let beta = (b.y / b.x).atan();
-
-    // TODO: replace this with actual logic
-    [b_c, bp_c]
+    [b.center(), bp.center()]
 }
 
 pub fn undo_last(st: &mut UiState) {

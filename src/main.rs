@@ -218,9 +218,7 @@ async fn main() {
         //  ===== Drawing and such =====
         clear_background(WHITE);
         draw_links(&st);
-        for block in &st.uiblocks {
-            draw_uiblock(block, &apl387);
-        }
+        draw_blocks(&st, &apl387);
         draw_help_keybind_text(&st, &apl387);
         draw_help_text(&st, &help_text, &apl387);
         draw_held(&st, curr_mouse_pos);
@@ -229,6 +227,41 @@ async fn main() {
         }
 
         next_frame().await;
+    }
+}
+
+fn draw_blocks(st: &UiState, font: &Rc<Font>) {
+    let font = Some(&**font);
+    for block in &st.uiblocks {
+        let text = &block.radical.to_string();
+
+        let r = block.bounding_rect();
+
+        draw_rectangle(r.x, r.y, r.w, r.h, WHITE);
+        draw_rounded_rectangle_lines(
+            Vec2 { x: r.x, y: r.y },
+            r.w,
+            r.h,
+            B::ROUNDNESS,
+            B::SIDES,
+            B::LINE_THICKNESS,
+            BLACK,
+        );
+        draw_text_ex(
+            text,
+            block.pos.x,
+            block.pos.y,
+            TextParams {
+                font,
+                font_size: B::FONT_SIZE,
+                color: BLACK,
+                ..Default::default()
+            },
+        );
+
+        for center in block.link_positions() {
+            draw_circle(center.x, center.y, B::LINK_CIRCLE_RADIUS, SKYBLUE);
+        }
     }
 }
 
@@ -246,7 +279,6 @@ fn draw_held(st: &UiState, curr_mouse_pos: Vec2) {
         }
         Some(Held::RectangleCreation { from }) => {
             let to = curr_mouse_pos;
-            // TODO: roundedness?
             draw_rectangle(
                 from.x.min(to.x),
                 from.y.min(to.y),
@@ -263,16 +295,16 @@ fn draw_help_text(st: &UiState, help_text: &String, apl387: &Rc<Font>) {
     if st.is_help_up {
         let baseline = HELP_TEXT_FONTSIZE as f32;
         let TextDimensions {
-            width: t_width,
-            height: t_height,
+            width: w,
+            height: h,
             ..
         } = measure_multiline_text(help_text, Some(&**apl387), HELP_TEXT_FONTSIZE, 1.0, None);
 
         draw_rectangle(
             0.0,
             0.0,
-            t_width,
-            t_height,
+            w,
+            h,
             Color {
                 r: 1.0,
                 g: 1.0,
@@ -317,7 +349,7 @@ fn draw_links(st: &UiState) {
         let bp = get_block_unchecked(&st.uiblocks, b_id);
         let [a, b] = get_points_for_link(b, bp);
 
-        // This is cheating! For drawing double/triple bonds >:3
+        // This is cheating! >:3 For drawing double/triple bonds
         for (i, t) in (1..=(2 * m - 1)).rev().step_by(2).enumerate() {
             let color = if i % 2 != 0 { WHITE } else { BLACK };
             draw_line(a.x, a.y, b.x, b.y, LINK_LINE_THICKNESS * (t as f32), color);
@@ -340,51 +372,6 @@ fn draw_naming_text(text: &String, apl387: &Rc<Font>, st: &UiState) {
             color: BLACK,
         },
     );
-}
-
-fn draw_uiblock(block: &UiBlock, font: &Rc<Font>) {
-    // TODO: make these rounded
-    //draw_rectangle_rounded(
-    //    Rectangle {
-    //        w: block.dims().width + 2.0 * B::PAD_H,
-    //        h: block.dims().height + 2.0 * B::PAD_V,
-    //        x: block.pos.x - B::PAD_H,
-    //        y: block.pos.y - B::PAD_V,
-    //    },
-    //    B::ROUNDNESS,
-    //    B::SEGMENTS,
-    //    WHITE,
-    //);
-    let text = &block.radical.to_string();
-    let font = Some(&**font);
-
-    let r = block.bounding_rect();
-
-    draw_rectangle(r.x, r.y, r.w, r.h, WHITE);
-    draw_rounded_rectangle_lines(
-        Vec2 { x: r.x, y: r.y },
-        r.w,
-        r.h,
-        B::ROUNDNESS,
-        B::SIDES,
-        B::LINE_THICKNESS,
-        BLACK,
-    );
-    draw_text_ex(
-        text,
-        block.pos.x,
-        block.pos.y,
-        TextParams {
-            font,
-            font_size: B::FONT_SIZE,
-            color: BLACK,
-            ..Default::default()
-        },
-    );
-
-    for center in block.link_positions() {
-        draw_circle(center.x, center.y, B::LINK_CIRCLE_RADIUS, SKYBLUE);
-    }
 }
 
 /// Draw a rounded rect's lines with at point `p` with width `w` and height `h`

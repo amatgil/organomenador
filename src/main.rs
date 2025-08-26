@@ -129,12 +129,8 @@ async fn main() {
 
             // We've _stopped_ dragging some radicals
             (Some(Held::Radicals(data)), false) => {
-                let mut new_data = vec![];
-                for (id, from) in data {
-                    let to = get_block_unchecked(&st.uiblocks, *id).pos;
-                    new_data.push((*id, *from, to));
-                }
-                st.push_to_undo(UiAction::MoveRadicals(new_data));
+                let undo_data = get_undo_displacement_data(data, &st.uiblocks);
+                st.push_to_undo(UiAction::MoveRadicals(undo_data));
                 st.held = None;
             }
 
@@ -194,7 +190,11 @@ async fn main() {
             }
 
             // We've stopped dragging, drop the selection
-            (Some(Held::SelectionDrag(_)), false) => st.held = None,
+            (Some(Held::SelectionDrag(data)), false) => {
+                let undo_data = get_undo_displacement_data(data, &st.uiblocks);
+                st.push_to_undo(UiAction::MoveRadicals(undo_data));
+                st.held = None
+            }
         }
 
         if is_key_down(KeyCode::Escape) || is_mouse_button_down(MouseButton::Right) {
@@ -242,6 +242,17 @@ async fn main() {
 
         next_frame().await;
     }
+}
+
+fn get_undo_displacement_data(
+    data: &mut Vec<(u128, Vec2)>,
+    blocks: &[UiBlock],
+) -> Vec<(u128, Vec2, Vec2)> {
+    let undo_data = data
+        .iter()
+        .map(|(id, from)| (*id, *from, get_block_unchecked(&blocks, *id).pos))
+        .collect();
+    undo_data
 }
 
 fn draw_blocks(st: &UiState, font: &Rc<Font>) {

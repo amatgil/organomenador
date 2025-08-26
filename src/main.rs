@@ -1,6 +1,5 @@
 use macroquad::color::colors::*;
 use macroquad::prelude::*;
-use macroquad::rand::*;
 use organomenador::*;
 use std::fmt::Write;
 use std::rc::Rc;
@@ -163,7 +162,24 @@ async fn main() {
             (Some(Held::RectangleCreation { .. }), true) => {}
 
             // We've stoped holding a selection
-            (Some(Held::RectangleCreation { .. }), false) => st.held = None,
+            (Some(Held::RectangleCreation { from }), false) => {
+                let mut held_data = vec![];
+                let p = from.min(curr_mouse_pos);
+                let q = from.max(curr_mouse_pos);
+                for b in &st.uiblocks {
+                    if (p.x <= b.pos.x && p.y <= b.pos.y) && (b.pos.x <= q.x && b.pos.y <= q.y) {
+                        held_data.push((b.id, b.pos))
+                    }
+                }
+                st.held = Some(Held::Selection(held_data));
+            }
+            (Some(Held::Selection(_)), true) => st.held = None,
+
+            (Some(Held::Selection(data)), false) => {
+                for (id, _from) in data {
+                    get_block_unchecked_mut(&mut st.uiblocks, *id).pos += mouse_delta;
+                }
+            }
         }
         if is_mouse_button_down(MouseButton::Right) {
             // TODO: if over a radical, interpret that as initiating holding a link
@@ -171,25 +187,16 @@ async fn main() {
                 Some(Held::Radicals(data)) => data.iter().for_each(|(id, from)| {
                     get_block_unchecked_mut(&mut st.uiblocks, *id).pos = *from
                 }),
-                Some(Held::Link { .. } | Held::RectangleCreation { .. }) | None => {}
+                Some(Held::Selection(..))
+                | Some(Held::Link { .. } | Held::RectangleCreation { .. })
+                | None => {}
             }
             st.held = None;
         }
 
         // ===== Handle keypresses =====
         for (_, radical) in KEYMAP.iter().filter(|(k, _)| is_key_pressed(*k)) {
-            let r = 10;
-            let rand_delta = Vec2 {
-                x: gen_range(-r, r) as f32,
-                y: gen_range(-r, r) as f32,
-            };
-            let b = UiBlock {
-                pos: curr_mouse_pos + rand_delta,
-                radical: *radical,
-                font: apl387.clone(),
-                id: generate_random_id(),
-                links: vec![],
-            };
+            let b = UiBlock::new(curr_mouse_pos, *radical, apl387.clone());
             st.push_to_undo(UiAction::AddRadical(b.clone()));
             st.uiblocks.push(b);
         }
@@ -234,8 +241,14 @@ fn draw_blocks(st: &UiState, font: &Rc<Font>) {
     let font = Some(&**font);
     for block in &st.uiblocks {
         let text = &block.radical.to_string();
-
         let r = block.bounding_rect();
+        let color = if let Some(Held::Selection(data)) = &st.held
+            && data.iter().map(|(id, _from)| id).any(|id| *id == block.id)
+        {
+            BLUE
+        } else {
+            BLACK
+        };
 
         draw_rectangle(r.x, r.y, r.w, r.h, WHITE);
         draw_rounded_rectangle_lines(
@@ -245,7 +258,7 @@ fn draw_blocks(st: &UiState, font: &Rc<Font>) {
             B::ROUNDNESS,
             B::SIDES,
             B::LINE_THICKNESS,
-            BLACK,
+            color,
         );
         draw_text_ex(
             text,

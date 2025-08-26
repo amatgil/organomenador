@@ -79,6 +79,20 @@ impl UiBlock {
     pub const SIDES: u8 = 20;
     pub const LINE_THICKNESS: f32 = 4.0;
 
+    pub fn new(pos: Vec2, radical: UiRadical, font: Rc<Font>) -> Self {
+        let r = 10;
+        let rand_delta = Vec2 {
+            x: gen_range(-r, r) as f32,
+            y: gen_range(-r, r) as f32,
+        };
+        Self {
+            pos: pos + rand_delta,
+            radical,
+            font,
+            id: generate_random_id(),
+            links: vec![],
+        }
+    }
     pub fn dims(&self) -> TextDimensions {
         let text = self.radical.to_string();
         measure_text(&text, Some(&*self.font), Self::FONT_SIZE, 1.0)
@@ -164,7 +178,6 @@ impl UiBlock {
 #[derive(Debug, Clone)]
 pub enum Held {
     /// `.0` is of the form Vec<(id, from)>
-    // /// `origin` is where the mouse was originally when the holding down was initiated
     Radicals(Vec<(Id, Vec2)>),
     Link {
         radical: Id,
@@ -173,6 +186,8 @@ pub enum Held {
     RectangleCreation {
         from: Vec2,
     },
+    /// `.0` is of the form Vec<(id, from)>
+    Selection(Vec<(Id, Vec2)>),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

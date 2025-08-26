@@ -175,19 +175,20 @@ impl UiBlock {
     }
 }
 
+/// In all branches, the type Vec<(Id, Vec2)> represents
+/// the form Vec<(id, from)>
 #[derive(Debug, Clone)]
 pub enum Held {
-    /// `.0` is of the form Vec<(id, from)>
+    /// Displacing (usually a single) radical
     Radicals(Vec<(Id, Vec2)>),
-    Link {
-        radical: Id,
-        from: Vec2,
-    },
-    RectangleCreation {
-        from: Vec2,
-    },
-    /// `.0` is of the form Vec<(id, from)>
+    /// Creating a link
+    Link { radical: Id, from: Vec2 },
+    /// Creating the selection rectangle
+    RectangleCreation { from: Vec2 },
+    /// Non-moving selection
     Selection(Vec<(Id, Vec2)>),
+    /// Moving selection
+    SelectionDrag(Vec<(Id, Vec2)>),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -538,4 +539,33 @@ pub fn generate_random_id() -> Id {
         | (rand() as u128) << (32 * 2)
         | (rand() as u128) << 32
         | (rand() as u128)
+}
+
+pub fn displace_blocks(blocks: &mut [UiBlock], data: &[(Id, Vec2)], delta: Vec2) {
+    for (id, _from) in data {
+        get_block_unchecked_mut(blocks, *id).pos += delta;
+    }
+}
+
+pub fn drop_selection(st: &mut UiState) {
+    match &st.held {
+        Some(Held::Radicals(data) | Held::Selection(data) | Held::SelectionDrag(data)) => data
+            .iter()
+            .for_each(|(id, from)| get_block_unchecked_mut(&mut st.uiblocks, *id).pos = *from),
+        Some(Held::Link { .. } | Held::RectangleCreation { .. }) => {}
+        None => {}
+    }
+    st.held = None;
+}
+
+pub fn is_block_selected(held: &Option<Held>, id: Id) -> bool {
+    match held {
+        Some(Held::Selection(data) | Held::SelectionDrag(data)) => data
+            .iter()
+            .map(|(id_2, _from)| id_2)
+            .any(|id_2| *id_2 == id),
+        Some(Held::Radicals(..) | Held::Link { .. } | Held::RectangleCreation { .. }) | None => {
+            false
+        }
+    }
 }

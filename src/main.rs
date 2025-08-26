@@ -104,10 +104,12 @@ async fn main() {
                     .iter()
                     .position(|b| b.bounding_rect().contains(curr_mouse_pos))
                 {
-                    st.held = Some(Held::Radicals(vec![(
-                        st.uiblocks[index].id,
-                        st.uiblocks[index].pos,
-                    )]));
+                    let data = vec![(st.uiblocks[index].id, st.uiblocks[index].pos)];
+                    if is_key_down(KeyCode::LeftControl) || is_key_down(KeyCode::RightControl) {
+                        st.held = Some(Held::Selection(data));
+                    } else {
+                        st.held = Some(Held::Radicals(data));
+                    }
                 } else if let Some((radical, from)) =
                     link_node_at_point(&st.uiblocks, curr_mouse_pos, LINK_CIRCLE_CLICKING_THRESHOLD)
                 {
@@ -173,25 +175,30 @@ async fn main() {
                 }
                 st.held = Some(Held::Selection(held_data));
             }
-            (Some(Held::Selection(_)), true) => st.held = None,
 
-            (Some(Held::Selection(data)), false) => {
-                for (id, _from) in data {
-                    get_block_unchecked_mut(&mut st.uiblocks, *id).pos += mouse_delta;
+            // Selection exists and we've clicked
+            // Depends on if we're clicking on a block or on the background
+            (Some(Held::Selection(data)), true) => {
+                if get_block_under_point(&st.uiblocks, curr_mouse_pos).is_some() {
+                    // I don't like this clone here :/
+                    st.held = Some(Held::SelectionDrag(data.clone()));
+                } else {
+                    st.held = None;
                 }
             }
-        }
-        if is_mouse_button_down(MouseButton::Right) {
-            // TODO: if over a radical, interpret that as initiating holding a link
-            match st.held {
-                Some(Held::Radicals(data)) => data.iter().for_each(|(id, from)| {
-                    get_block_unchecked_mut(&mut st.uiblocks, *id).pos = *from
-                }),
-                Some(Held::Selection(..))
-                | Some(Held::Link { .. } | Held::RectangleCreation { .. })
-                | None => {}
+
+            // Selection exists but we're doing nothing: do nothing
+            (Some(Held::Selection(_)), false) => {}
+            (Some(Held::SelectionDrag(data)), true) => {
+                displace_blocks(&mut st.uiblocks, &data, mouse_delta)
             }
-            st.held = None;
+
+            // We've stopped dragging, drop the selection
+            (Some(Held::SelectionDrag(_)), false) => st.held = None,
+        }
+
+        if is_key_down(KeyCode::Escape) || is_mouse_button_down(MouseButton::Right) {
+            drop_selection(&mut st);
         }
 
         // ===== Handle keypresses =====
@@ -242,9 +249,7 @@ fn draw_blocks(st: &UiState, font: &Rc<Font>) {
     for block in &st.uiblocks {
         let text = &block.radical.to_string();
         let r = block.bounding_rect();
-        let color = if let Some(Held::Selection(data)) = &st.held
-            && data.iter().map(|(id, _from)| id).any(|id| *id == block.id)
-        {
+        let color = if is_block_selected(&st.held, block.id) {
             BLUE
         } else {
             BLACK
